@@ -1734,8 +1734,9 @@ async function loadIndOverview(teamFilter = "") {
   const setText = (el, v) => { if (el) el.textContent = v; };
   setText(elCerts, "…"); setText(elConsult, "…"); setText(elExternos, "…"); setText(elPerdidas, "…");
 
-  const valid    = "expirado=not.is.true";
-  const expired  = "expirado=is.true";
+  // Perdida = Status expirado OU consultor saiu; estas não contam nos restantes cards.
+  const valid    = "expirado=not.is.true&saiu=not.is.true";
+  const expired  = "or=(expirado.is.true,saiu.is.true)";
   const team     = teamFilter ? `&equipa=eq.${encodeURIComponent(teamFilter)}` : "";
   const base     = `${API_BASE_URL}/stay_certified`;
 
