@@ -997,8 +997,10 @@ function setupUpdateIndicadoresBtn() {
         body: JSON.stringify({ ano, mes: mesNum, equipa: selectedTeam.trim(), certificacoes, consultores })
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+      const removidos = await sweepRealizedPlanRows(selectedTeam);
+      const planMsg = removidos > 0 ? `\n\n${removidos} registo(s) de planeamento já certificado(s) removido(s).` : "";
       await _modal.alert(
-        `Indicadores de "${selectedTeam}" atualizados:\n${certificacoes} certificações válidas · ${consultores} consultores únicos`,
+        `Indicadores de "${selectedTeam}" atualizados:\n${certificacoes} certificações válidas · ${consultores} consultores únicos${planMsg}`,
         `${mesNome} ${ano} — Atualização concluída`
       );
     } catch (err) {
@@ -1008,6 +1010,43 @@ function setupUpdateIndicadoresBtn() {
       btn.disabled = false;
     }
   });
+}
+
+// Remove do planeamento da equipa os registos que já têm certificação (mesmo email + código).
+// Devolve o número de registos removidos.
+async function sweepRealizedPlanRows(team) {
+  const norm = (v) => (v || "").toLowerCase().trim();
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/planeamento?select=equipa,email,codigo_certificacao&equipa=eq.${encodeURIComponent(team)}&limit=5000`,
+      { headers: supabaseHeaders() }
+    );
+    if (!res.ok) throw new Error(`GET planeamento failed ${res.status}`);
+    const certified = new Set(stayRows.map(r => `${norm(r.email)}|${norm(r.codigo_certificacao)}`));
+    const matches = (await res.json()).filter(p => certified.has(`${norm(p.email)}|${norm(p.codigo_certificacao)}`));
+    if (!matches.length) return 0;
+
+    const lista = matches.map(p => `• ${p.email} / ${p.codigo_certificacao}`).join("\n");
+    const ok = await _modal.confirm(
+      `${matches.length} registo(s) de planeamento já estão certificados:\n\n${lista}\n\nRemover do planeamento?`,
+      "Planeamento já certificado"
+    );
+    if (!ok) return 0;
+
+    for (const p of matches) {
+      const query = `equipa=eq.${encodeURIComponent(p.equipa)}&email=eq.${encodeURIComponent(p.email)}&codigo_certificacao=eq.${encodeURIComponent(p.codigo_certificacao)}`;
+      const [del] = await Promise.all([
+        fetch(`${API_BASE_URL}/planeamento?${query}`, { method: "DELETE", headers: supabaseHeaders() }),
+        fetch(`${API_BASE_URL}/planeamento_notas?${query}`, { method: "DELETE", headers: supabaseHeaders() })
+      ]);
+      if (!del.ok) throw new Error(`DELETE planeamento failed ${del.status}`);
+    }
+    return matches.length;
+  } catch (err) {
+    console.error("Erro ao limpar planeamento já certificado:", err);
+    await _modal.alert(`Os indicadores foram gravados, mas a limpeza do planeamento falhou: ${err.message}`, "Planeamento não atualizado");
+    return 0;
+  }
 }
 
 // Apply drilldown filters from URL query params (e.g. ?filter_email=x&filter_site=y)
