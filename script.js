@@ -976,8 +976,9 @@ function setupUpdateIndicadoresBtn() {
     if (!confirmed) return;
 
     // Count valid certs and unique consultants for the selected team right now
+    // (exclui certificações perdidas: expiradas ou de consultores que saíram)
     const scope = stayRows.filter(r => r.equipa === selectedTeam);
-    const valid = scope.filter(r => !(r.expirado === true || r.expirado === 'X'));
+    const valid = scope.filter(r => !(r.expirado === true || r.expirado === 'X') && !(r.saiu === true || r.saiu === 'X'));
     const certificacoes = valid.length;
     const consultores = new Set(
       valid.map(r => (r.email || "").toLowerCase().trim()).filter(Boolean)
