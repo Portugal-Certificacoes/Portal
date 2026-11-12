@@ -2402,8 +2402,8 @@ async function loadHomeTotals() {
     const [resCerts, resPlan, resAlert15, resAlert30, resRanking, resCodigos, resSites] = await Promise.all([
       fetch(`${API_BASE_URL}/stay_certified?select=email&${valid}&limit=1`, { headers }),
       fetch(`${API_BASE_URL}/planeamento?select=email&status=eq.Planeado&limit=1`, { headers }),
-      fetch(`${API_BASE_URL}/stay_certified?select=email&${valid}&data_expiracao=gte.${today}&data_expiracao=lte.${in15}&limit=1`, { headers }),
-      fetch(`${API_BASE_URL}/stay_certified?select=email&${valid}&data_expiracao=gt.${in15}&data_expiracao=lte.${in30}&limit=1`, { headers }),
+      fetch(`${API_BASE_URL}/stay_certified?select=email&${valid}&saiu=not.is.true&data_expiracao=gte.${today}&data_expiracao=lte.${in15}&limit=1`, { headers }),
+      fetch(`${API_BASE_URL}/stay_certified?select=email&${valid}&saiu=not.is.true&data_expiracao=gt.${in15}&data_expiracao=lte.${in30}&limit=1`, { headers }),
       fetch(`${API_BASE_URL}/stay_certified?select=email&${valid}&limit=2000`, { headers: supabaseHeaders() }),
       fetch(`${API_BASE_URL}/stay_certified?select=codigo_certificacao,nome_certificacao&${valid}&limit=2000`, { headers: supabaseHeaders() }),
       fetch(`${API_BASE_URL}/stay_certified?select=site&${valid}&limit=2000`, { headers: supabaseHeaders() })
@@ -2918,7 +2918,7 @@ async function loadAlertCounters(teamFilter = "") {
   const hdCount = supabaseHeaders({ Prefer: "count=exact" });
   const hdData  = supabaseHeaders();
   const baseUrl = `${API_BASE_URL}/stay_certified`;
-  const valid   = `expirado=not.is.true`;
+  const valid   = `expirado=not.is.true&saiu=not.is.true`;
   const team    = teamFilter ? `&equipa=eq.${encodeURIComponent(teamFilter)}` : "";
 
   const parseCR = (res) => {
@@ -3265,7 +3265,7 @@ loadPlanAlerts();
     const today = new Date().toISOString().slice(0, 10);
     const in15  = new Date(Date.now() + 15*24*60*60*1000).toISOString().slice(0, 10);
     const in30  = new Date(Date.now() + 30*24*60*60*1000).toISOString().slice(0, 10);
-    const valid = `expirado=not.is.true`;
+    const valid = `expirado=not.is.true&saiu=not.is.true`;
     const hd = supabaseHeaders({ Prefer: "count=exact" });
     const parseCR = r => { const m = (r.headers.get("content-range")||"").match(/\/(\d+)$/); return m ? Number(m[1]) : 0; };
     const [r15, r30] = await Promise.all([
